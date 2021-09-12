@@ -11,6 +11,8 @@ const Cover = require('./cover.js');
 const Author = require('./author.js');
 const List = require('./list.js');
 const APIRequestError = require('../internal/requesterror.js');
+const UploadSession = require('../internal/uploadsession.js');
+const Group = require('./group.js');
 
 /**
  * Represents a manga object
@@ -59,7 +61,7 @@ class Manga {
          * Is this Manga locked?
          * @type {Boolean}
          */
-        this.isLocked = context.data.attributes.isLocked;
+        this.isLocked = context.data.attributes.isLocked === true;
 
         /**
          * Link object representing links to other websites about this manga
@@ -75,16 +77,16 @@ class Manga {
         this.originalLanguage = context.data.attributes.originalLanguage;
 
         /**
-         * Number this manga's last volume based on the default feed order
-         * @type {Number}
+         * This manga's last volume based on the default feed order
+         * @type {String}
          */
-        this.lastVolume = context.data.attributes.lastVolume !== null && !isNaN(context.data.attributes.lastVolume) ? parseFloat(context.data.attributes.lastVolume) : null;
+        this.lastVolume = context.data.attributes.lastVolume;
 
         /**
-         * Number of this manga's last chapter based on the default feed order
-         * @type {Number}
+         * This manga's last chapter based on the default feed order
+         * @type {String}
          */
-        this.lastChapter = context.data.attributes.lastChapter !== null && !isNaN(context.data.attributes.lastChapter) ? parseFloat(context.data.attributes.lastChapter) : null;
+        this.lastChapter = context.data.attributes.lastChapter;
 
         /**
          * Publication demographic of this manga
@@ -127,19 +129,19 @@ class Manga {
          * Authors attributed to this manga
          * @type {Relationship[]}
          */
-        this.authors = Relationship.convertType('author', context.relationships, this);
+        this.authors = Relationship.convertType('author', context.data.relationships, this);
 
         /**
          * Artists attributed to this manga
          * @type {Relationship[]}
          */
-        this.artists = Relationship.convertType('artist', context.relationships, this);
+        this.artists = Relationship.convertType('artist', context.data.relationships, this);
 
         /**
          * This manga's main cover. Use 'getCovers' to retrive other covers
          * @type {Relationship}
          */
-        this.mainCover = Relationship.convertType('cover_art', context.relationships, this).pop();
+        this.mainCover = Relationship.convertType('cover_art', context.data.relationships, this).pop();
         if (!this.mainCover) this.mainCover = null;
 
         /**
@@ -194,6 +196,8 @@ class Manga {
      * @property {String[]|Tag[]} [MangaParameterObject.excludedTags]
      * @property {Array<'ongoing'|'completed'|'hiatus'|'cancelled'>} [MangaParameterObject.status]
      * @property {String[]} [MangaParameterObject.originalLanguage]
+     * @property {String[]} [MangaParameterObject.excludedOriginalLanguage]
+     * @property {String[]} [MangaParameterObject.availableTranslatedLanguage]
      * @property {Array<'shounen'|'shoujo'|'josei'|'seinen'|'none'>} [MangaParameterObject.publicationDemographic]
      * @property {String[]} [MangaParameterObject.ids] Max of 100 per request
      * @property {Array<'safe'|'suggestive'|'erotica'|'pornographic'>} [MangaParameterObject.contentRating]
@@ -295,7 +299,7 @@ class Manga {
         await AuthUtil.validateTokens();
         let params = { limit: limit, offset: offset };
         return await Util.apiCastedRequest('/user/follows/manga', Manga, params);
-        // Currently (6/16/21) MD does not support includes[]=artist&includes[]=author&includes[]=cover_art for this endpoint
+        // Currently (8/30/21) MD does not support includes[]=artist&includes[]=author&includes[]=cover_art for this endpoint
     }
 
     /**
@@ -341,6 +345,17 @@ class Manga {
     static async setReadingStatus(id, status = null) {
         await AuthUtil.validateTokens();
         await Util.apiRequest(`/manga/${id}/status`, 'POST', { status: status });
+    }
+
+    /**
+     * Returns the reading status for every manga for this logged in user as an object with Manga ids as keys
+     * @returns {Object.<string, 'reading'|'on_hold'|'plan_to_read'|'dropped'|'re_reading'|'completed'>}
+     */
+    static async getAllReadingStatuses() {
+        await AuthUtil.validateTokens();
+        let res = await Util.apiRequest(`/manga/status`);
+        if (!('statuses' in res)) throw new APIRequestError('The API did not respond with a statuses object when it was expected to', APIRequestError.INVALID_RESPONSE);
+        return res.statuses;
     }
 
     /**
@@ -391,17 +406,60 @@ class Manga {
     }
 
     /**
+     * @private
+     * @typedef {Object} AggregateChapter
+     * @property {String} AggregateChapter.chapter
+     * @property {Number} AggregateChapter.count
+     */
+
+    /**
+     * @private
+     * @typedef {Object} AggregateVolume
+     * @property {String} AggregateVolume.volume
+     * @property {Number} AggregateVolume.count
+     * @property {Object.<string, AggregateChapter>} AggregateVolume.chapters
+     */
+
+    /**
      * Returns a summary of every chapter for a manga including each of their numbers and volumes they belong to
      * https://api.mangadex.org/docs.html#operation/post-manga
      * @param {String} id
      * @param {...String} languages 
-     * @returns {Promise<Object>}
+     * @returns {Promise<Object.<string, AggregateVolume>>}
      */
     static async getAggregate(id, ...languages) {
         if (languages[0] instanceof Array) languages = languages[0];
         let res = await Util.apiParameterRequest(`/manga/${id}/aggregate`, { translatedLanguage: languages });
         if (!('volumes' in res)) throw new APIRequestError('The API did not respond with the appropriate aggregate structure', APIRequestError.INVALID_RESPONSE);
         return res.volumes;
+    }
+
+    /**
+     * Creates a new upload session with a manga as the target
+     * @param {String} id
+     * @param {...String|Group} [groups]
+     * @returns {Promise<UploadSession>}
+     */
+    static createUploadSession(id, ...groups) {
+        return UploadSession.open(id, ...groups);
+    }
+
+    /**
+     * Returns the currently open upload session for the logged in user.
+     * Returns null if there is no current session
+     * @returns {Promise<UploadSession>}
+     */
+    static getCurrentUploadSession() {
+        return UploadSession.getCurrentSession();
+    }
+
+    /**
+     * Creates a new upload session with this manga as the target
+     * @param {...String|Group} [groups]
+     * @returns {Promise<UploadSession>}
+     */
+    createUploadSession(...groups) {
+        return Manga.createUploadSession(this.id, ...groups);
     }
 
     /**

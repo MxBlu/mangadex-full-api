@@ -157,13 +157,16 @@ declare module 'mangadex-full-api' {
 	     * @property {'asc'|'desc'} [ChapterParameterObject.order.volume]
 	     * @property {'asc'|'desc'} [ChapterParameterObject.order.chapter]
 	     * @property {String[]} [ChapterParameterObject.translatedLanguage]
+	     * @property {String[]} [ChapterParameterObject.originalLanguage]
+	     * @property {String[]} [ChapterParameterObject.excludedOriginalLanguage]
+	     * @property {Array<'safe'|'suggestive'|'erotica'|'pornographic'>} [ChapterParameterObject.contentRating]
 	     * @property {String[]} [ChapterParameterObject.ids] Max of 100 per request
 	     * @property {Number} [ChapterParameterObject.limit] Not limited by API limits (more than 100). Use Infinity for maximum results (use at your own risk)
 	     * @property {Number} [ChapterParameterObject.offset]
 	     * @property {String[]|Group[]} [ChapterParameterObject.groups]
 	     * @property {String|User|Relationship} [ChapterParameterObject.uploader]
 	     * @property {String|Manga|Relationship} [ChapterParameterObject.manga]
-	     * @property {String} [ChapterParameterObject.volume]
+	     * @property {String[]} [ChapterParameterObject.volume]
 	     * @property {String} [ChapterParameterObject.chapter]
 	     */
 	    /**
@@ -195,6 +198,9 @@ declare module 'mangadex-full-api' {
 	            chapter?: 'asc' | 'desc';
 	        };
 	        translatedLanguage?: string[];
+	        originalLanguage?: string[];
+	        excludedOriginalLanguage?: string[];
+	        contentRating?: Array<'safe' | 'suggestive' | 'erotica' | 'pornographic'>;
 	        /**
 	         * Max of 100 per request
 	         */
@@ -207,7 +213,7 @@ declare module 'mangadex-full-api' {
 	        groups?: string[] | Group[];
 	        uploader?: string | any | Relationship;
 	        manga?: string | Manga | Relationship;
-	        volume?: string;
+	        volume?: string[];
 	        chapter?: string;
 	    }, includeSubObjects?: boolean): Promise<Chapter[]>;
 	    /**
@@ -250,6 +256,9 @@ declare module 'mangadex-full-api' {
 	            chapter: 'asc' | 'desc';
 	        };
 	        translatedLanguage?: string[];
+	        originalLanguage?: string[];
+	        excludedOriginalLanguage?: string[];
+	        contentRating?: Array<'safe' | 'suggestive' | 'erotica' | 'pornographic'>;
 	        /**
 	         * Max of 100 per request
 	         */
@@ -262,7 +271,7 @@ declare module 'mangadex-full-api' {
 	        groups?: string[] | Group[];
 	        uploader?: string | any | Relationship;
 	        manga?: string | Manga | Relationship;
-	        volume?: string;
+	        volume?: string[];
 	        chapter?: string;
 	    }): Promise<Chapter>;
 	    /**
@@ -279,15 +288,15 @@ declare module 'mangadex-full-api' {
 	    constructor(context: any | string);
 	    id: string;
 	    /**
-	     * Number this chapter's volume
-	     * @type {Number}
+	     * This chapter's volume number/string
+	     * @type {String}
 	     */
-	    volume: number;
+	    volume: string;
 	    /**
-	     * Number of this chapter
-	     * @type {Number}
+	     * This chapter's number/string identifier
+	     * @type {String}
 	     */
-	    chapter: number;
+	    chapter: string;
 	    /**
 	     * Title of this chapter
 	     * @type {String}
@@ -328,6 +337,16 @@ declare module 'mangadex-full-api' {
 	     * @type {String[]}
 	     */
 	    saverPageNames: string[];
+	    /**
+	     * Is this chapter only a link to another website (eg Mangaplus) instead of being hosted on MD?
+	     * @type {Boolean}
+	     */
+	    isExternal: boolean;
+	    /**
+	     * The external URL to this chapter if it is not hosted on MD. Null if it is hosted on MD
+	     * @type {String}
+	     */
+	    externalUrl: string;
 	    /**
 	     * The scanlation groups that are attributed to this chapter
 	     * @type {Relationship[]}
@@ -465,9 +484,9 @@ declare module 'mangadex-full-api' {
 	    id: string;
 	    /**
 	     * Manga volume this is a cover for
-	     * @type {Number}
+	     * @type {String}
 	     */
-	    volume: number;
+	    volume: string;
 	    /**
 	     * Description of this cover
 	     * @type {String}
@@ -608,15 +627,55 @@ declare module 'mangadex-full-api' {
 	     */
 	    updatedAt: Date;
 	    /**
-	     * This group's leader
-	     * @type {User}
+	     * Is this group locked?
+	     * @type {Boolean}
 	     */
-	    leader: User;
+	    locked: boolean;
+	    /**
+	     * Website URL for this group
+	     * @type {String}
+	     */
+	    website: string;
+	    /**
+	    * IRC Server for this group
+	    * @type {String}
+	    */
+	    ircServer: string;
+	    /**
+	    * IRC Channel for this group
+	    * @type {String}
+	    */
+	    ircChannel: string;
+	    /**
+	    * Discord Invite Code for this group
+	    * @type {String}
+	    */
+	    discord: string;
+	    /**
+	     * The group's custom description
+	     * @type {String}
+	     */
+	    description: string;
+	    /**
+	     * Is this group an official publisher?
+	     * @type {Boolean}
+	     */
+	    official: boolean;
+	    /**
+	     * Is this group managed by an official publisher?
+	     * @type {Boolean}
+	     */
+	    verified: boolean;
+	    /**
+	     * This group's leader
+	     * @type {Relationship}
+	     */
+	    leader: Relationship;
 	    /**
 	     * Array of this group's members
-	     * @type {User[]}
+	     * @type {Relationship[]}
 	     */
-	    members: User[];
+	    members: Relationship[];
 	    /**
 	     * Makes the logged in user either follow or unfollow this group
 	     * @param {Boolean} [follow=true] True to follow, false to unfollow
@@ -667,21 +726,21 @@ declare module 'mangadex-full-api' {
 	    static removeManga(listId: string, manga: Manga | string): Promise<void>;
 	    /**
 	     * Returns all lists created by the logged in user.
-	     * As of the MD v5 Beta, this returns an empty list.
 	     * @param {Number} [limit=100] Amount of lists to return (0 to Infinity)
 	     * @param {Number} [offset=0] How many lists to skip before returning
+	     * @param {Boolean} [includeSubObjects=false] Attempt to resolve sub objects (eg author, artists, etc) when available through the base request
 	     * @returns {Promise<List[]>}
 	     */
-	    static getLoggedInUserLists(limit?: number, offset?: number): Promise<List[]>;
+	    static getLoggedInUserLists(limit?: number, offset?: number, includeSubObjects?: boolean): Promise<List[]>;
 	    /**
 	     * Returns all public lists created by a user.
-	     * As of the MD v5 Beta, this returns an empty list.
 	     * @param {String|User|Relationship} user
 	     * @param {Number} [limit=100] Amount of lists to return (0 to Infinity)
 	     * @param {Number} [offset=0] How many lists to skip before returning
+	     * @param {Boolean} [includeSubObjects=false] Attempt to resolve sub objects (eg author, artists, etc) when available through the base request
 	     * @returns {Promise<List[]>}
 	     */
-	    static getUserLists(user: string | User | Relationship, limit?: number, offset?: number): Promise<List[]>;
+	    static getUserLists(user: string | User | Relationship, limit?: number, offset?: number, includeSubObjects?: boolean): Promise<List[]>;
 	    /**
 	     * @private
 	     * @typedef {Object} FeedParameterObject
@@ -758,9 +817,9 @@ declare module 'mangadex-full-api' {
 	    manga: Relationship[];
 	    /**
 	     * This list's owner
-	     * @type {User}
+	     * @type {Relationship}
 	     */
-	    owner: User;
+	    owner: Relationship;
 	    /**
 	     * Is this list public?
 	     * @type {Boolean}
@@ -858,6 +917,8 @@ declare module 'mangadex-full-api' {
 	     * @property {String[]|Tag[]} [MangaParameterObject.excludedTags]
 	     * @property {Array<'ongoing'|'completed'|'hiatus'|'cancelled'>} [MangaParameterObject.status]
 	     * @property {String[]} [MangaParameterObject.originalLanguage]
+	     * @property {String[]} [MangaParameterObject.excludedOriginalLanguage]
+	     * @property {String[]} [MangaParameterObject.availableTranslatedLanguage]
 	     * @property {Array<'shounen'|'shoujo'|'josei'|'seinen'|'none'>} [MangaParameterObject.publicationDemographic]
 	     * @property {String[]} [MangaParameterObject.ids] Max of 100 per request
 	     * @property {Array<'safe'|'suggestive'|'erotica'|'pornographic'>} [MangaParameterObject.contentRating]
@@ -900,6 +961,8 @@ declare module 'mangadex-full-api' {
 	        excludedTags?: string[] | Tag[];
 	        status?: Array<'ongoing' | 'completed' | 'hiatus' | 'cancelled'>;
 	        originalLanguage?: string[];
+	        excludedOriginalLanguage?: string[];
+	        availableTranslatedLanguage?: string[];
 	        publicationDemographic?: Array<'shounen' | 'shoujo' | 'josei' | 'seinen' | 'none'>;
 	        /**
 	         * Max of 100 per request
@@ -960,6 +1023,8 @@ declare module 'mangadex-full-api' {
 	        excludedTags?: string[] | Tag[];
 	        status?: Array<'ongoing' | 'completed' | 'hiatus' | 'cancelled'>;
 	        originalLanguage?: string[];
+	        excludedOriginalLanguage?: string[];
+	        availableTranslatedLanguage?: string[];
 	        publicationDemographic?: Array<'shounen' | 'shoujo' | 'josei' | 'seinen' | 'none'>;
 	        /**
 	         * Max of 100 per request
@@ -1064,6 +1129,13 @@ declare module 'mangadex-full-api' {
 	     */
 	    static setReadingStatus(id: string, status?: 'reading' | 'on_hold' | 'plan_to_read' | 'dropped' | 're_reading' | 'completed'): Promise<void>;
 	    /**
+	     * Returns the reading status for every manga for this logged in user as an object with Manga ids as keys
+	     * @returns {Object.<string, 'reading'|'on_hold'|'plan_to_read'|'dropped'|'re_reading'|'completed'>}
+	     */
+	    static getAllReadingStatuses(): {
+	        [x: string]: 'reading' | 'on_hold' | 'plan_to_read' | 'dropped' | 're_reading' | 'completed';
+	    };
+	    /**
 	     * Gets the combined feed of every manga followed by the logged in user
 	     * @param {FeedParameterObject|Number} [parameterObject] Either a parameter object or a number representing the limit
 	     * @param {Boolean} [includeSubObjects=false] Attempt to resolve sub objects (eg author, artists, etc) when available through the base request
@@ -1115,13 +1187,50 @@ declare module 'mangadex-full-api' {
 	     */
 	    static getCovers(...id: (string | Manga | Relationship)[]): Promise<Cover[]>;
 	    /**
+	     * @private
+	     * @typedef {Object} AggregateChapter
+	     * @property {String} AggregateChapter.chapter
+	     * @property {Number} AggregateChapter.count
+	     */
+	    /**
+	     * @private
+	     * @typedef {Object} AggregateVolume
+	     * @property {String} AggregateVolume.volume
+	     * @property {Number} AggregateVolume.count
+	     * @property {Object.<string, AggregateChapter>} AggregateVolume.chapters
+	     */
+	    /**
 	     * Returns a summary of every chapter for a manga including each of their numbers and volumes they belong to
 	     * https://api.mangadex.org/docs.html#operation/post-manga
 	     * @param {String} id
 	     * @param {...String} languages
-	     * @returns {Promise<Object>}
+	     * @returns {Promise<Object.<string, AggregateVolume>>}
 	     */
-	    static getAggregate(id: string, ...languages: string[]): Promise<any>;
+	    static getAggregate(id: string, ...languages: string[]): Promise<{
+	        [x: string]: {
+	            volume: string;
+	            count: number;
+	            chapters: {
+	                [x: string]: {
+	                    chapter: string;
+	                    count: number;
+	                };
+	            };
+	        };
+	    }>;
+	    /**
+	     * Creates a new upload session with a manga as the target
+	     * @param {String} id
+	     * @param {...String|Group} [groups]
+	     * @returns {Promise<UploadSession>}
+	     */
+	    static createUploadSession(id: string, ...groups?: (string | Group)[]): Promise<UploadSession>;
+	    /**
+	     * Returns the currently open upload session for the logged in user.
+	     * Returns null if there is no current session
+	     * @returns {Promise<UploadSession>}
+	     */
+	    static getCurrentUploadSession(): Promise<UploadSession>;
 	    /**
 	     * There is no reason to directly create a manga object. Use static methods, ie 'get()'.
 	     * @param {Object|String} context Either an API response or Mangadex id
@@ -1160,15 +1269,15 @@ declare module 'mangadex-full-api' {
 	     */
 	    originalLanguage: string;
 	    /**
-	     * Number this manga's last volume based on the default feed order
-	     * @type {Number}
+	     * This manga's last volume based on the default feed order
+	     * @type {String}
 	     */
-	    lastVolume: number;
+	    lastVolume: string;
 	    /**
-	     * Number of this manga's last chapter based on the default feed order
-	     * @type {Number}
+	     * This manga's last chapter based on the default feed order
+	     * @type {String}
 	     */
-	    lastChapter: number;
+	    lastChapter: string;
 	    /**
 	     * Publication demographic of this manga
 	     * https://api.mangadex.org/docs.html#section/Static-data/Manga-publication-demographic
@@ -1235,6 +1344,12 @@ declare module 'mangadex-full-api' {
 	     * @type {String}
 	     */
 	    get description(): string;
+	    /**
+	     * Creates a new upload session with this manga as the target
+	     * @param {...String|Group} [groups]
+	     * @returns {Promise<UploadSession>}
+	     */
+	    createUploadSession(...groups?: (string | Group)[]): Promise<UploadSession>;
 	    /**
 	     * Returns all covers for this manga
 	     * @returns {Promise<Cover[]>}
@@ -1474,6 +1589,12 @@ declare class Relationship {
      * @param {Object} classObject
      */
     private static registerType;
+    /**
+     * Resolves an array of relationships
+     * @private
+     * @param {Relationship[]} relationshipArray
+     */
+    private static resolveAll;
     constructor(data: any);
     /**
      * Id of the object this is a relationship to
@@ -1485,6 +1606,12 @@ declare class Relationship {
      * @type {String}
      */
     type: string;
+    /**
+     * True if this relationship will instantly return with an included object instead of sending a request
+     * when resolve() is called
+     * @type {Boolean}
+     */
+    cached: boolean;
     /**
      * This function must be called to return the proper and complete object representation of this relationship.
      * Essentially, it calls and returns Manga.get(), Author.get(), Cover.get(), etc.
@@ -1571,4 +1698,121 @@ declare class Tag {
      * @type {String}
      */
     get description(): string;
+}
+
+/**
+ * Represents a chapter upload session
+ * https://api.mangadex.org/docs.html#tag/Upload
+ */
+declare class UploadSession {
+    /**
+     * Requests MD to start an upload session
+     * @param {String|Manga} manga
+     * @param  {...String|Group|Relationship} [groups]
+     * @returns {UploadSession}
+     */
+    static open(manga: string | any, ...groups?: (string | any | Relationship)[]): UploadSession;
+    /**
+     * Returns the currently open upload session for the logged in user.
+     * Returns null if there is no current session
+     * @returns {UploadSession|null}
+     */
+    static getCurrentSession(): UploadSession | null;
+    /**
+     * There is no reason to directly create an upload session object. Use static methods, ie 'open()'.
+     * @param {Object} res API response
+     */
+    constructor(res: any);
+    /**
+     * Id of this upload session
+     * @type {String}
+     */
+    id: string;
+    /**
+     * Relationship of the target manga
+     * @type {Relationship}
+     */
+    manga: Relationship;
+    /**
+     * Relationships to the groups attributed to this chapter
+     * @type {Relationship}
+     */
+    groups: Relationship;
+    /**
+     * Relationship to the uploader (the current user)
+     * @type {Relationship}
+     */
+    uploader: Relationship;
+    /**
+     * Is this session commited?
+     * @type {Boolean}
+     */
+    isCommitted: boolean;
+    /**
+     * Is this session processed?
+     * @type {Boolean}
+     */
+    isProcessed: boolean;
+    /**
+    * Is this session deleted?
+    * @type {Boolean}
+    */
+    isDeleted: boolean;
+    /**
+     * Is this session open for uploading pages?
+     * @type {Boolean}
+     */
+    open: boolean;
+    /**
+     * The ids of every page uploaded THIS session
+     * @type {String[]}
+     */
+    pages: string[];
+    /**
+     * @private
+     * @typedef {Object} PageFileObject
+     * @property {Buffer} PageFileObject.data
+     * @property {'jpeg'|'png'|'gif'} [PageFileObject.type]
+     * @property {String} PageFileObject.name
+     */
+    /**
+     * Uploads pages through this upload session
+     * @param {PageFileObject[]} pages
+     * @returns {Promise<String[]>} Returns the ids of every newly uploaded file
+     */
+    uploadPages(pages: {
+        data: any;
+        type?: 'jpeg' | 'png' | 'gif';
+        name: string;
+    }[]): Promise<string[]>;
+    /**
+     * Closes this upload session
+     * @returns {Promise<void>}
+     */
+    close(): Promise<void>;
+    /**
+     * @private
+     * @typedef {Object} ChapterDraftObject
+     * @property {String} ChapterDraftObject.volume
+     * @property {String} ChapterDraftObject.chapter
+     * @property {String} ChapterDraftObject.title
+     * @property {String} ChapterDraftObject.translatedLanguage
+     */
+    /**
+     * @param {ChapterDraftObject} chapterDraft
+     * @param {String[]} pageOrder Array of file ids sorted by their proper order. Default is the upload order
+     * @returns {Promise<Chapter>} Returns the new chapter
+     */
+    commit(chapterDraft: {
+        volume: string;
+        chapter: string;
+        title: string;
+        translatedLanguage: string;
+    }, pageOrder?: string[]): Promise<Chapter>;
+    /**
+     * Deletes an uploaded page via its upload file id.
+     * @param {...String} page
+     * @returns {Promise<void>}
+     */
+    deletePage(page: string[]): Promise<void>;
 }

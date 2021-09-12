@@ -33,16 +33,16 @@ class Chapter {
         if (context.data.attributes === undefined) context.data.attributes = {};
 
         /**
-         * Number this chapter's volume
-         * @type {Number}
+         * This chapter's volume number/string
+         * @type {String}
          */
-        this.volume = context.data.attributes.volume !== null && !isNaN(context.data.attributes.volume) ? parseFloat(context.data.attributes.volume) : null;
+        this.volume = context.data.attributes.volume;
 
         /**
-         * Number of this chapter
-         * @type {Number}
+         * This chapter's number/string identifier
+         * @type {String}
          */
-        this.chapter = context.data.attributes.chapter !== null && !isNaN(context.data.attributes.chapter) ? parseFloat(context.data.attributes.chapter) : null;
+        this.chapter = context.data.attributes.chapter;
 
         /**
          * Title of this chapter
@@ -93,22 +93,38 @@ class Chapter {
         this.saverPageNames = context.data.attributes.dataSaver;
 
         /**
+         * Is this chapter only a link to another website (eg Mangaplus) instead of being hosted on MD?
+         * @type {Boolean}
+         */
+        this.isExternal = 'externalUrl' in context.data.attributes && context.data.attributes.externalUrl !== null;
+        if (this.isExternal) {
+            this.pageNames = [];
+            this.saverPageNames = [];
+        }
+
+        /**
+         * The external URL to this chapter if it is not hosted on MD. Null if it is hosted on MD
+         * @type {String}
+         */
+        this.externalUrl = this.isExternal ? context.data.attributes.externalUrl : null;
+
+        /**
          * The scanlation groups that are attributed to this chapter
          * @type {Relationship[]}
          */
-        this.groups = Relationship.convertType('scanlation_group', context.relationships, this);
+        this.groups = Relationship.convertType('scanlation_group', context.data.relationships, this);
 
         /**
          * The manga this chapter belongs to
          * @type {Relationship}
          */
-        this.manga = Relationship.convertType('manga', context.relationships, this).pop();
+        this.manga = Relationship.convertType('manga', context.data.relationships, this).pop();
 
         /**
          * The user who uploaded this chapter
          * @type {Relationship}
          */
-        this.uploader = Relationship.convertType('user', context.relationships, this).pop();
+        this.uploader = Relationship.convertType('user', context.data.relationships, this).pop();
     }
 
     /**
@@ -125,13 +141,16 @@ class Chapter {
      * @property {'asc'|'desc'} [ChapterParameterObject.order.volume]
      * @property {'asc'|'desc'} [ChapterParameterObject.order.chapter]
      * @property {String[]} [ChapterParameterObject.translatedLanguage]
+     * @property {String[]} [ChapterParameterObject.originalLanguage]
+     * @property {String[]} [ChapterParameterObject.excludedOriginalLanguage]
+     * @property {Array<'safe'|'suggestive'|'erotica'|'pornographic'>} [ChapterParameterObject.contentRating]
      * @property {String[]} [ChapterParameterObject.ids] Max of 100 per request
      * @property {Number} [ChapterParameterObject.limit] Not limited by API limits (more than 100). Use Infinity for maximum results (use at your own risk)
      * @property {Number} [ChapterParameterObject.offset]
      * @property {String[]|Group[]} [ChapterParameterObject.groups]
      * @property {String|User|Relationship} [ChapterParameterObject.uploader]
      * @property {String|Manga|Relationship} [ChapterParameterObject.manga]
-     * @property {String} [ChapterParameterObject.volume]
+     * @property {String[]} [ChapterParameterObject.volume]
      * @property {String} [ChapterParameterObject.chapter]
      */
 
@@ -201,6 +220,7 @@ class Chapter {
      * @returns {Promise<String[]>}
      */
     async getReadablePages(saver = false) {
+        if (this.isExternal) throw new Error('Cannot get readable pages for an external chapter.');
         let res = await Util.apiRequest(`/at-home/server/${this.id}`);
         return (saver ? this.saverPageNames : this.pageNames).map(name => `${res.baseUrl}/${saver ? 'data-saver' : 'data'}/${this.hash}/${name}`);
     }

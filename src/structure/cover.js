@@ -33,9 +33,9 @@ class Cover {
 
         /**
          * Manga volume this is a cover for
-         * @type {Number}
+         * @type {String}
          */
-        this.volume = context.data.attributes.volume !== null && !isNaN(context.data.attributes.volume) ? parseFloat(context.data.attributes.volume) : null;
+        this.volume = context.data.attributes.volume;
 
         /**
          * Description of this cover
@@ -59,14 +59,14 @@ class Cover {
          * Manga this is a cover for
          * @type {Relationship}
          */
-        this.manga = Relationship.convertType('manga', context.relationships, this).pop();
+        this.manga = Relationship.convertType('manga', context.data.relationships, this).pop();
         if (!this.manga) this.manga = null;
 
         /**
          * The user who uploaded this cover
          * @type {Relationship}
          */
-        this.uploader = Relationship.convertType('user', context.relationships, this).pop();
+        this.uploader = Relationship.convertType('user', context.data.relationships, this).pop();
         if (!this.uploader) this.uploader = null;
 
         /**
